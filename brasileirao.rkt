@@ -1,75 +1,18 @@
 #lang racket
 
-(require examples)
+(require "./auxiliares.rkt" examples)
 
-(struct resultado (nome-t1 placar-t1 nome-t2 placar-t2) #:transparent)
-(struct desempenho (nome saldo pontuacao num-vitorias) #:transparent)
+(struct resultado (nome-anfitrião gols-anfitrião nome-visitante gols-visitante) #:transparent)
+;; nome-anfitrião é uma String
+;; gols-anfitrião é um inteiro não negativo
+;; nome-visitante é uma String
+;; gols-vitante é um inteiro não negativo
 
-;; list list FuncaoComparadora -> list
-;; Dadas duas listas ordenadas, retorna uma outra lista ordenada
-;; contendo os elementos das outras duas, as operaçoes de comparação
-;; são feitas com a função comparadora `cmp`
-(define (merge-lists lstA lstB cmp)
-  (cond
-    [(empty? lstA) lstB]
-    [(empty? lstB) lstA]
-    [else
-     (if (cmp (first lstA) (first lstB))
-         (cons (first lstA) (merge-lists (rest lstA) lstB cmp))
-         (cons (first lstB) (merge-lists lstA (rest lstB) cmp)))]))
-
-;; list -> list
-;; Retorna os primeiros `size` elementos de `lst`, dado
-;; que (<= size (length lst))
-(define (take lst size)
-  (cond
-    [(= size 0) empty]
-    [else
-     (cons (first lst) (take (rest lst) (sub1 size)))]))
-
-(examples
- (check-equal? (take empty 0) empty)
- (check-equal? (take (list "a" "b" "c") 0) empty)
- (check-equal? (take (list "a" "b" "c") 1) (list "a"))
- (check-equal? (take (list "a" "b" "c") 2) (list "a" "b"))
- (check-equal? (take (list "a" "b" "c") 3) (list "a" "b" "c")))
-
-;; list -> list
-;; Remove os primeiros `size` elementos de `lst`, dado
-;; que (<= size (length lst))
-(define (drop lst size)
-  (cond
-    [(= size 0) lst]
-    [else
-     (drop (rest lst) (sub1 size))]))
-
-(examples
- (check-equal? (drop empty 0) empty)
- (check-equal? (drop (list "a" "b" "c") 0) (list "a" "b" "c"))
- (check-equal? (drop (list "a" "b" "c") 1) (list "b" "c"))
- (check-equal? (drop (list "a" "b" "c") 2) (list "c"))
- (check-equal? (drop (list "a" "b" "c") 3) empty))
-    
-;; list FuncaoComparadora -> list
-;; Ordena uma lista utilizando `cmp` como
-;; comparador entre os elementos em O(nlogn).
-(define (merge-sort lst cmp)
-  (cond
-    [(empty? lst) empty] ; tamanho 0
-    [(empty? (rest lst)) lst] ; tamanho 1
-    [else
-     (let ([half (floor (/ (length lst) 2))])
-       (merge-lists (merge-sort (take lst half) cmp)
-                    (merge-sort (drop lst half) cmp)
-                    cmp))]))
-
-(examples
- (check-equal? (merge-sort empty <) empty)
- (check-equal? (merge-sort (list 1) <) (list 1))
- (check-equal? (merge-sort (list 2 1) <) (list 1 2))
- (check-equal? (merge-sort (list 3 2 1) <) (list 1 2 3))
- (check-equal? (merge-sort (list 4 3 2 1) <) (list 1 2 3 4))
- (check-equal? (merge-sort (list 2 14 1 4 6 2 1 9 2 5) <) (list 1 1 2 2 2 4 5 6 9 14)))
+(struct desempenho (nome pontuacao num-vitorias saldo) #:transparent)
+;; nome é uma String
+;; pontuacao é um inteiro não negativo
+;; num-vitorias é um inteiro não negativo
+;; saldo é um inteiro não negativo
 
 
 ;; String -> resultado
@@ -86,12 +29,13 @@
  (check-equal? (string->resultado "A    3     Time2    10 ")
                (resultado "A" 3 "Time2" 10)))
 
+
 ;; Resultado -> listof Integer
 ;; Dado o resultado de um jogo, retorna uma lista
 ;; contendo o saldo de gols dos dois times.
 (define (calcula-saldos resultado)
-  (define saldo-t1 (- (resultado-placar-t1 resultado)
-                      (resultado-placar-t2 resultado)))
+  (define saldo-t1 (- (resultado-gols-anfitrião resultado)
+                      (resultado-gols-visitante resultado)))
   (list saldo-t1 (- saldo-t1)))
 
 (examples
@@ -124,15 +68,15 @@
     [else
      (define saldo-times (calcula-saldos (first resultados)))
      (define pontuacao-times (calcula-pontuacoes saldo-times))
-     (define nome-times (list (resultado-nome-t1 (first resultados))
-                              (resultado-nome-t2 (first resultados))))
+     (define nome-times (list (resultado-nome-anfitrião (first resultados))
+                              (resultado-nome-visitante (first resultados))))
      (define vitoria (list
                       (if (> (first saldo-times) 0) 1 0)
                       (if (> (second saldo-times) 0) 1 0)))
      (cons
-      (desempenho (first nome-times) (first saldo-times) (first pontuacao-times) (first vitoria))
+      (desempenho (first nome-times) (first pontuacao-times) (first vitoria) (first saldo-times))
       (cons
-       (desempenho (second nome-times) (second saldo-times) (second pontuacao-times) (second vitoria))
+       (desempenho (second nome-times) (second pontuacao-times) (second vitoria) (second saldo-times))
        (calcula-desempenhos (rest resultados))))]))
 
 (examples
@@ -144,13 +88,37 @@
                              (resultado
                               "Bragantino" 1 "Corinthians" 1)))
   (list
-   (desempenho "Corinthians" 2 3 1)
-   (desempenho "Palmeiras" -2 0 0)
-   (desempenho "Cuiabá" -1 0 0)
-   (desempenho "Bragantino" 1 3 1)
-   (desempenho "Bragantino" 0 1 0)
-   (desempenho "Corinthians" 0 1 0))))
-  
+   (desempenho "Corinthians" 3 1 2)
+   (desempenho "Palmeiras" 0 0 -2)
+   (desempenho "Cuiabá" 0 0 -1)
+   (desempenho "Bragantino" 3 1 1)
+   (desempenho "Bragantino" 1 0 0)
+   (desempenho "Corinthians" 1 0 0))))
+ 
+
+;; listof listof desempenho -> listof desempenho
+;; dado uma lista de desempenhos agrupados, retorna
+;; uma lista de desempenhos acumulados.
+(define (acumula-rec desempenhos)
+  (map (lambda (desempenhos-agrupados)
+         (foldr (lambda (d1 d2) (desempenho
+                                     (desempenho-nome d1)
+                                     (+ (desempenho-pontuacao d1) (desempenho-pontuacao d2))
+                                     (+ (desempenho-num-vitorias d1) (desempenho-num-vitorias d2))
+                                     (+ (desempenho-saldo d1) (desempenho-saldo d2))))
+                    (desempenho "" 0 0 0)
+                    desempenhos-agrupados))
+       desempenhos))
+
+(examples
+ (check-equal? (acumula-rec (list (list (desempenho "a" 1 2 3) (desempenho "a" 3 2 1))))
+                            (list (desempenho "a" 4 4 4)))
+ (check-equal? (acumula-rec (list (list (desempenho "a" 1 2 3) (desempenho "a" 3 2 1))
+                                  (list (desempenho "b" 1 4 3) (desempenho "b" 13 14 21)))) 
+                            (list (desempenho "a" 4 4 4)
+                                  (desempenho "b" 14 18 24))))
+
+
 ;; listof desempenho -> listof desempenho
 ;; Dado uma lista do desempenho dos times em cada um dos jogos,
 ;; onde um mesmo time aparece várias vezes, retorna uma lista
@@ -160,40 +128,32 @@
   (define desempenhos-ordenados-por-nome
     (merge-sort desempenhos (lambda (d1 d2)
                               (string<? (desempenho-nome d1)
-                                 (desempenho-nome d2)))))
-  (define desempenho-times (group-by (lambda (x) (desempenho-nome x)) desempenhos-ordenados-por-nome))
-  (define (acumula-rec des)
-    (cond
-      [(empty? des) empty]
-      [else
-       (cons (foldr (lambda (d1 d2) (desempenho
-                                     (desempenho-nome d1)
-                                     (+ (desempenho-saldo d1) (desempenho-saldo d2))
-                                     (+ (desempenho-pontuacao d1) (desempenho-pontuacao d2))
-                                     (+ (desempenho-num-vitorias d1) (desempenho-num-vitorias d2))))
-                    (desempenho "" 0 0 0)
-                    (first des))
-            (acumula-rec (rest des)))]))
-  (acumula-rec desempenho-times))
+                                        (desempenho-nome d2)))))
+  (define desempenho-agrupado-por-time (group-by (lambda (x) (desempenho-nome x)) desempenhos-ordenados-por-nome))
+  
+  (acumula-rec desempenho-agrupado-por-time))
 
 (examples
  (check-equal?
   (acumula-desempenhos
    (list
-   (desempenho "Corinthians" 2 3 1)
-   (desempenho "Palmeiras" -2 0 0)
-   (desempenho "Cuiabá" -1 0 0)
-   (desempenho "Bragantino" 1 3 1)
-   (desempenho "Bragantino" 0 1 0)
-   (desempenho "Corinthians" 0 1 0)))
+    (desempenho "Corinthians" 3 1 2)
+    (desempenho "Palmeiras" 0 0 -2)
+    (desempenho "Cuiabá" 0 0 -1)
+    (desempenho "Bragantino" 3 1 1)
+    (desempenho "Bragantino" 1 0 0)
+    (desempenho "Corinthians" 1 0 0)))
   (list
-   (desempenho "Bragantino" 1 4 1)
-   (desempenho "Corinthians" 2 4 1)
-   (desempenho "Cuiabá" -1 0 0)
-   (desempenho "Palmeiras" -2 0 0))))
+   (desempenho "Bragantino" 4 1 1)
+   (desempenho "Corinthians" 4 1 2)
+   (desempenho "Cuiabá" 0 0 -1)
+   (desempenho "Palmeiras" 0 0 -2))))
 
 
-(define (comp-times d1 d2)
+;; dados o desempenho de dois times, retorna #t se o primeiro
+;; time deve estar antes do segundo, e #f caso contrário.
+;; desempenho desempenho -> Bool
+(define (compara-desempenho d1 d2)
   (cond
     [(not (equal?
            (desempenho-pontuacao d1) (desempenho-pontuacao d2)))
@@ -209,8 +169,15 @@
 
     [else (string<? (desempenho-nome d1) (desempenho-nome d2))]))
 
+(examples
+ (check-equal? (compara-desempenho (desempenho "a" 30 20 10) (desempenho "b" 29 20 10)) #t)
+ (check-equal? (compara-desempenho (desempenho "a" 30 25 10) (desempenho "b" 30 20 10)) #t)
+ (check-equal? (compara-desempenho (desempenho "a" 30 20 12) (desempenho "b" 30 20 10)) #t)
+ (check-equal? (compara-desempenho (desempenho "a" 30 20 10) (desempenho "b" 30 20 10)) #t)
+ (check-equal? (compara-desempenho (desempenho "a" 6 20 10) (desempenho "b" 10 20 10)) #f))
+               
 (define (classifica desempenho-times)
-  (merge-sort desempenho-times comp-times))
+  (merge-sort desempenho-times compara-desempenho))
 
 (define (desempenho->string desempenho)
   (string-append (desempenho-nome desempenho) " "
@@ -229,9 +196,9 @@
 
   ;; Transforma a lista de desempenhos de cada jogo em uma lista
   ;; do desempenho acumulado de cada um dos times.
-  (define desempenhos-acumulado (acumula-desempenhos desempenhos))
+  (define desempenhos-acumulados (acumula-desempenhos desempenhos))
 
-  (define classificacao (classifica desempenhos-acumulado))
+  (define classificacao (classifica desempenhos-acumulados))
 
   (map desempenho->string classificacao))
   
