@@ -1,0 +1,4 @@
+Sao-Paulo 1 Atletico-MG 2
+Flamengo 2 Palmeiras 1
+Palmeiras 0 Sao-Paulo 0
+Atletico-MG 1 Flamengo 2
