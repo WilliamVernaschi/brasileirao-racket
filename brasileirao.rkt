@@ -8,6 +8,7 @@
 ;; nome-visitante é uma String
 ;; gols-vitante é um inteiro não negativo
 
+;; desempenho é um DesempenhoJogo ou DesempenhoFinal
 (struct desempenho (nome pontuacao num-vitorias saldo) #:transparent)
 ;; nome é uma String
 ;; pontuacao é um inteiro não negativo
@@ -59,7 +60,7 @@
  (check-equal? (calcula-pontuacoes (list -2 2)) (list 0 3))
  (check-equal? (calcula-pontuacoes (list 0 0)) (list 1 1)))
 
-;; listof resultado -> listof desempenho
+;; listof resultado -> listof desempenhoJogo
 ;; Dado uma lista contendo o resultado de n jogos, retorna
 ;; uma lista contendo 2n desempenhos dos times.
 (define (calcula-desempenhos resultados)
@@ -96,34 +97,11 @@
    (desempenho "Corinthians" 1 0 0))))
  
 
-;; listof listof desempenho -> listof desempenho
-;; dado uma lista de desempenhos agrupados, retorna
-;; uma lista de desempenhos acumulados.
-(define (acumula-rec desempenhos)
-  (map (lambda (desempenhos-agrupados)
-         (foldr (lambda (d1 d2) (desempenho
-                                     (desempenho-nome d1)
-                                     (+ (desempenho-pontuacao d1) (desempenho-pontuacao d2))
-                                     (+ (desempenho-num-vitorias d1) (desempenho-num-vitorias d2))
-                                     (+ (desempenho-saldo d1) (desempenho-saldo d2))))
-                    (desempenho "" 0 0 0)
-                    desempenhos-agrupados))
-       desempenhos))
-
-(examples
- (check-equal? (acumula-rec (list (list (desempenho "a" 1 2 3) (desempenho "a" 3 2 1))))
-                            (list (desempenho "a" 4 4 4)))
- (check-equal? (acumula-rec (list (list (desempenho "a" 1 2 3) (desempenho "a" 3 2 1))
-                                  (list (desempenho "b" 1 4 3) (desempenho "b" 13 14 21)))) 
-                            (list (desempenho "a" 4 4 4)
-                                  (desempenho "b" 14 18 24))))
 
 
-;; listof desempenho -> listof desempenho
-;; Dado uma lista do desempenho dos times em cada um dos jogos,
-;; onde um mesmo time aparece várias vezes, retorna uma lista
-;; com o desempenho acumulado de cada um dos times em todos os jogos,
-;; olhe os exemplos.
+;; listof desempenhoJogo -> listof desempenhoFinal
+;; Dado uma lista do desempenho dos times em cada um dos jogos, retorna
+;; uma lista de desempenhos finais acumulados.
 (define (acumula-desempenhos desempenhos)
   (define desempenhos-ordenados-por-nome
     (merge-sort desempenhos (lambda (d1 d2)
@@ -131,7 +109,16 @@
                                         (desempenho-nome d2)))))
   (define desempenho-agrupado-por-time (group-by (lambda (x) (desempenho-nome x)) desempenhos-ordenados-por-nome))
   
-  (acumula-rec desempenho-agrupado-por-time))
+  (map (lambda (desempenhos-agrupados)
+         (foldr (lambda (d1 d2)
+                  (desempenho
+                   (desempenho-nome d1)
+                   (+ (desempenho-pontuacao d1) (desempenho-pontuacao d2))
+                   (+ (desempenho-num-vitorias d1) (desempenho-num-vitorias d2))
+                   (+ (desempenho-saldo d1) (desempenho-saldo d2))))
+                (desempenho "" 0 0 0)
+                desempenhos-agrupados))
+       desempenho-agrupado-por-time))
 
 (examples
  (check-equal?
@@ -150,9 +137,9 @@
    (desempenho "Palmeiras" 0 0 -2))))
 
 
-;; dados o desempenho de dois times, retorna #t se o primeiro
+;; dados os desempenhos de dois times, retorna #t se o primeiro
 ;; time deve estar antes do segundo, e #f caso contrário.
-;; desempenho desempenho -> Bool
+;; DesempenhoFinal DesempenhoFinal -> Bool
 (define (compara-desempenho d1 d2)
   (cond
     [(not (equal?
@@ -175,10 +162,13 @@
  (check-equal? (compara-desempenho (desempenho "a" 30 20 12) (desempenho "b" 30 20 10)) #t)
  (check-equal? (compara-desempenho (desempenho "a" 30 20 10) (desempenho "b" 30 20 10)) #t)
  (check-equal? (compara-desempenho (desempenho "a" 6 20 10) (desempenho "b" 10 20 10)) #f))
-               
+
+;; listof DesempenhoFinal -> listof DesempenhoFinal
+;; ordenas os times conforme as regras
 (define (classifica desempenho-times)
   (merge-sort desempenho-times compara-desempenho))
 
+;; DesempenhoFinal -> String
 (define (desempenho->string desempenho)
   (string-append (desempenho-nome desempenho) " "
                  (number->string (desempenho-pontuacao desempenho)) " "
@@ -190,14 +180,17 @@
 (define (classifica-times sresultados)
   ;; Transforma a lista de strings da entrada em uma lista de resultados
   (define resultados (map string->resultado sresultados))
-  
-  ;; Transforma a lista de resultados em uma lista de desempenhos
+
+  ;; listof resultado -> listof DesempenhoJogo
+  ;; Transforma a lista de resultados em uma lista de desempenhos de jogo
   (define desempenhos (calcula-desempenhos resultados))
 
+  ;; listof DesempenhoJogo -> listof DesempenhoFinal
   ;; Transforma a lista de desempenhos de cada jogo em uma lista
-  ;; do desempenho acumulado de cada um dos times.
+  ;; do desempenho acumulado de todos os jogos.
   (define desempenhos-acumulados (acumula-desempenhos desempenhos))
 
+  ;; listof DesempenhoFinal -> listof DesempenhoFinal
   (define classificacao (classifica desempenhos-acumulados))
 
   (map desempenho->string classificacao))
