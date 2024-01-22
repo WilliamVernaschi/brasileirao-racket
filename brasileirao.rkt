@@ -168,13 +168,27 @@
 (define (classifica desempenho-times)
   (merge-sort desempenho-times compara-desempenho))
 
-;; DesempenhoFinal -> String
-(define (desempenho->string desempenho)
-  (string-append (desempenho-nome desempenho) " "
-                 (number->string (desempenho-pontuacao desempenho)) " "
-                 (number->string (desempenho-num-vitorias desempenho)) " "
-                 (number->string (desempenho-saldo desempenho))))
+;; String Number Alinhamento -> String
+(define (cria-espaçamento str tamanho direcao)
+  (define espaços (make-string (- tamanho (string-length str)) #\space))
+  (cond
+    [(equal? direcao "esquerda") (string-append espaços str)]
+    [(equal? direcao "direita") (string-append str espaços)]))
 
+;; DesempenhoFinal InteiroNãoNegativo-> String
+(define (desempenho->string espaçamento-nome desempenho)
+  (string-append (cria-espaçamento (desempenho-nome desempenho) (+ espaçamento-nome 2) "direita") 
+                 (cria-espaçamento (number->string (desempenho-pontuacao desempenho)) 2 "esquerda")
+                 (cria-espaçamento (number->string (desempenho-num-vitorias desempenho)) 4 "esquerda")
+                 (cria-espaçamento (number->string (desempenho-saldo desempenho)) 5 "esquerda") " "))
+
+;; listof DesempenhoFinal -> Inteiro Positivo
+(define (calcula-maior-nome desempenhos)
+  (define tamanhos (map (lambda (d) (string-length (desempenho-nome d))) desempenhos))
+  (foldr (lambda (t1 t2) (max t1 t2))
+         0
+         tamanhos))
+  
 
 ;; listof String -> listof String
 (define (classifica-times sresultados)
@@ -192,8 +206,10 @@
 
   ;; listof DesempenhoFinal -> listof DesempenhoFinal
   (define classificacao (classifica desempenhos-acumulados))
+  
+  (define maior-nome (calcula-maior-nome classificacao))
 
-  (map desempenho->string classificacao))
+  (map (lambda (c) (desempenho->string maior-nome c)) classificacao))
   
 (display-lines (classifica-times (port->lines)))
   
