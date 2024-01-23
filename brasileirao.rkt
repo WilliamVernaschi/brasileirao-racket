@@ -1,28 +1,156 @@
 #lang racket
 
-(require "./auxiliares.rkt" examples)
+(require examples)
+
+;; list(X) list(X) (X X -> Bool) -> list(X)
+;; Dadas duas listas ordenadas, retorna uma outra lista ordenada
+;; contendo os elementos das outras duas, as operaçoes de comparação
+;; são feitas com a função comparadora `cmp`
+(define (merge-lists lstA lstB cmp)
+  (cond
+    [(empty? lstA) lstB]
+    [(empty? lstB) lstA]
+    [else
+     (if (cmp (first lstA) (first lstB))
+         (cons (first lstA) (merge-lists (rest lstA) lstB cmp))
+         (cons (first lstB) (merge-lists lstA (rest lstB) cmp)))]))
+
+
+;; list(X) -> list(X)
+;; Retorna os primeiros `size` elementos de `lst`, dado
+;; que (<= size (length lst))
+(define (take lst size)
+  (cond
+    [(= size 0) empty]
+    [else
+     (cons (first lst) (take (rest lst) (sub1 size)))]))
+
+(examples
+ (check-equal? (take empty 0) empty)
+ (check-equal? (take (list "a" "b" "c") 0) empty)
+ (check-equal? (take (list "a" "b" "c") 1) (list "a"))
+ (check-equal? (take (list "a" "b" "c") 2) (list "a" "b"))
+ (check-equal? (take (list "a" "b" "c") 3) (list "a" "b" "c")))
+
+;; list(X) -> list(X)
+;; Remove os primeiros `size` elementos de `lst`, dado
+;; que (<= size (length lst))
+(define (drop lst size)
+  (cond
+    [(= size 0) lst]
+    [else
+     (drop (rest lst) (sub1 size))]))
+
+(examples
+ (check-equal? (drop empty 0) empty)
+ (check-equal? (drop (list "a" "b" "c") 0) (list "a" "b" "c"))
+ (check-equal? (drop (list "a" "b" "c") 1) (list "b" "c"))
+ (check-equal? (drop (list "a" "b" "c") 2) (list "c"))
+ (check-equal? (drop (list "a" "b" "c") 3) empty))
+    
+;; list(X) (X X -> bool) -> list(X)
+;; Ordena uma lista utilizando `cmp` como
+;; comparador entre os elementos em O(nlogn).
+(define (merge-sort lst cmp)
+  (cond
+    [(empty? lst) empty] ; tamanho 0
+    [(empty? (rest lst)) lst] ; tamanho 1
+    [else
+     (define metade (floor (/ (length lst) 2)))
+     (merge-lists (merge-sort (take lst metade) cmp)
+                  (merge-sort (drop lst metade) cmp)
+                  cmp)]))
+
+(examples
+ (check-equal? (merge-sort empty <) empty)
+ (check-equal? (merge-sort (list 1) <) (list 1))
+ (check-equal? (merge-sort (list 2 1) <) (list 1 2))
+ (check-equal? (merge-sort (list 3 2 1) <) (list 1 2 3))
+ (check-equal? (merge-sort (list 4 3 2 1) <) (list 1 2 3 4))
+ (check-equal? (merge-sort (list 2 14 1 4 6 2 1 9 2 5) <) (list 1 1 2 2 2 4 5 6 9 14)))
+
+;; Dado uma lista não vazia '(a1 a2 a3 a4 ... )
+;; retorna o tamanho da maior subsequência tal que f(a1) = f(a2) = f(a3) ... f(ak)
+;; (X -> Y) list(X) -> InteiroNãoNegativo
+(define (tamanho-grupo-atual f lst)
+  (cond
+    [(empty? (rest lst)) 1]
+    [else
+     (if
+      (equal? (f (first lst)) (f (second lst)))
+      (add1 (tamanho-grupo-atual f (rest lst)))
+      1)]))
+
+(examples
+ (check-equal? (tamanho-grupo-atual (lambda (x) x) (list 1 2 3)) 1)
+ (check-equal? (tamanho-grupo-atual (lambda (x) x) (list 1 1 2 1 1 1)) 2)
+ (check-equal? (tamanho-grupo-atual (lambda (x) (not (= (modulo x 7) 0))) (list 2 3 5 5 11 313)) 6))
+
+;; Agrupa elementos contíguos que possuem o mesmo valor
+;; quando a função f é aplicada sobre eles.
+;; (X -> Y) list(X) -> list(list(X))
+(define (group-by f lst)
+  (cond
+    [(empty? lst) empty]
+    [else
+     (define tamanho-grupo (tamanho-grupo-atual f lst))
+     (cons (take lst tamanho-grupo) (group-by f (drop lst tamanho-grupo)))]))
+
+(examples
+ (check-equal? (group-by (lambda (x) x) empty)
+               empty)
+ (check-equal? (group-by (lambda (x) x) (list 1 2 3 3 2 2 2 1))
+               (list (list 1) (list 2) (list 3 3) (list 2 2 2) (list 1)))
+ (check-equal? (group-by (lambda (x) (modulo x 2)) (list 1 3 8 4 2 7 7))
+               (list (list 1 3) (list 8 4 2) (list 7 7))))
+
 
 (struct resultado (nome-anfitrião gols-anfitrião nome-visitante gols-visitante) #:transparent)
-;; nome-anfitrião é uma String
-;; gols-anfitrião é um inteiro não negativo
-;; nome-visitante é uma String
-;; gols-vitante é um inteiro não negativo
+;; Representa o resultado de um jogo.
+;; nome-anfitrião : String - Nome do time anfitrião.
+;; gols-anfitrião : InteiroNãoNegativo - Quantidade de gols marcados pelo time anfitrião.
+;; nome-visitante : String - Nome do time visitante.
+;; gols-visitante : InteiroNãoNegativo - Quantidade de gols marcados pelo time visitante.
 
-;; desempenho é um DesempenhoJogo ou DesempenhoFinal
-(struct desempenho (nome pontuacao num-vitorias saldo) #:transparent)
-;; nome é uma String
-;; pontuacao é um inteiro não negativo
-;; num-vitorias é um inteiro não negativo
-;; saldo é um inteiro não negativo
+
+(struct desempenho-jogo (nome saldo) #:transparent)
+;; DesempenhoJogo representa o desempenho de um time em uma única partida.
+;; nome : String - Nome do time.
+;; saldo : Inteiro - (- Número-de-gols-marcados Número-de-gols-sofridos) no jogo atual
+
+;; desempenho-jogo -> PontuaçãoJogo
+;; PontuaçãoJogo pode ser um dos valores: 0, 1 ou 3.
+;; Dado o desempenho de um time em um jogo, retorna quantos pontos ele
+;; ganhou.
+(define (desempenho-jogo->pontuação desempenho)
+  (cond
+    [(> (desempenho-jogo-saldo desempenho) 0) 3]
+    [(< (desempenho-jogo-saldo desempenho) 0) 0]
+    [else 1]))
+
+;; desempenho-jogo -> Bool
+;; Dado o desempenho de um time em um jogo, retorna #t se
+;; ele ganhou, e #f caso contrário.
+(define (desempenho-jogo->ganhou? desempenho)
+  (> (desempenho-jogo-saldo desempenho) 0))
+
+(struct desempenho-final (nome pontuacao num-vitorias saldo) #:transparent)
+;; desempenho-final representa o desempenho do time no final do campeonato.
+;; nome : String - Nome do time.
+;; pontuacao : InteiroNãoNegativo - Quantidade de pontos ganhos pelo time em todo o campeonato
+;; num-vitorias : InteiroNãoNegativo - número de vitórias do time em todo o campeonato
+;; saldo : Inteiro - (- Número-de-gols-marcados Número-de-gols-sofridos) em todo o campeonato
 
 
 ;; String -> resultado
-;; Dado uma string da forma que representa o placar de um jogo, retorna
+;; Dado uma string que representa o placar de um jogo, retorna
 ;; um resultado.
 (define (string->resultado sresultado)
   (define split (string-split sresultado))
-  (resultado (first split) (string->number (second split))
-             (third split) (string->number(fourth split))))
+  (resultado (first split)
+             (string->number (second split))
+             (third split)
+             (string->number (fourth split))))
 
 (examples
  (check-equal? (string->resultado "Sao-Paulo 1 Atletico-MG 2")
@@ -31,7 +159,7 @@
                (resultado "A" 3 "Time2" 10)))
 
 
-;; Resultado -> listof Integer
+;; resultado -> list(Inteiro)
 ;; Dado o resultado de um jogo, retorna uma lista
 ;; contendo o saldo de gols dos dois times.
 (define (calcula-saldos resultado)
@@ -43,24 +171,7 @@
  (check-equal? (calcula-saldos (resultado "Corinthians" 7 "Santos" 1)) (list 6 -6))
  (check-equal? (calcula-saldos (resultado "Sao-Paulo" 2 "Palmeiras" 2)) (list 0 0)))
 
-;; listof Integer -> listof Integer
-;; Dado uma lista contendo o saldo de gols de um jogo
-;; entre dois times, retorna uma lista contendo a
-;; pontuação de cada um dos dois times.
-(define (calcula-pontuacoes saldos)
-  (define (calcula-pontuacao saldo)
-    (cond
-      [(> saldo 0) 3]
-      [(< saldo 0) 0]
-      [else 1]))
-  (map calcula-pontuacao saldos))
-
-(examples
- (check-equal? (calcula-pontuacoes (list 3 -3)) (list 3 0))
- (check-equal? (calcula-pontuacoes (list -2 2)) (list 0 3))
- (check-equal? (calcula-pontuacoes (list 0 0)) (list 1 1)))
-
-;; listof resultado -> listof desempenhoJogo
+;; list(resultado) -> list(desempenho-jogo)
 ;; Dado uma lista contendo o resultado de n jogos, retorna
 ;; uma lista contendo 2n desempenhos dos times.
 (define (calcula-desempenhos resultados)
@@ -68,16 +179,12 @@
     [(empty? resultados) empty]
     [else
      (define saldo-times (calcula-saldos (first resultados)))
-     (define pontuacao-times (calcula-pontuacoes saldo-times))
      (define nome-times (list (resultado-nome-anfitrião (first resultados))
                               (resultado-nome-visitante (first resultados))))
-     (define vitoria (list
-                      (if (> (first saldo-times) 0) 1 0)
-                      (if (> (second saldo-times) 0) 1 0)))
      (cons
-      (desempenho (first nome-times) (first pontuacao-times) (first vitoria) (first saldo-times))
+      (desempenho-jogo (first nome-times) (first saldo-times))
       (cons
-       (desempenho (second nome-times) (second pontuacao-times) (second vitoria) (second saldo-times))
+       (desempenho-jogo (second nome-times) (second saldo-times))
        (calcula-desempenhos (rest resultados))))]))
 
 (examples
@@ -89,34 +196,34 @@
                              (resultado
                               "Bragantino" 1 "Corinthians" 1)))
   (list
-   (desempenho "Corinthians" 3 1 2)
-   (desempenho "Palmeiras" 0 0 -2)
-   (desempenho "Cuiabá" 0 0 -1)
-   (desempenho "Bragantino" 3 1 1)
-   (desempenho "Bragantino" 1 0 0)
-   (desempenho "Corinthians" 1 0 0))))
+   (desempenho-jogo "Corinthians" 2)
+   (desempenho-jogo "Palmeiras" -2)
+   (desempenho-jogo "Cuiabá" -1)
+   (desempenho-jogo "Bragantino" 1)
+   (desempenho-jogo "Bragantino"  0)
+   (desempenho-jogo "Corinthians" 0))))
  
 
 
 
-;; listof desempenhoJogo -> listof desempenhoFinal
+;; list(desempenho-jogo) -> list(desempenho-final)
 ;; Dado uma lista do desempenho dos times em cada um dos jogos, retorna
 ;; uma lista de desempenhos finais acumulados.
 (define (acumula-desempenhos desempenhos)
   (define desempenhos-ordenados-por-nome
     (merge-sort desempenhos (lambda (d1 d2)
-                              (string<? (desempenho-nome d1)
-                                        (desempenho-nome d2)))))
-  (define desempenho-agrupado-por-time (group-by (lambda (x) (desempenho-nome x)) desempenhos-ordenados-por-nome))
+                              (string<? (desempenho-jogo-nome d1)
+                                        (desempenho-jogo-nome d2)))))
+  (define desempenho-agrupado-por-time (group-by (lambda (x) (desempenho-jogo-nome x)) desempenhos-ordenados-por-nome))
   
   (map (lambda (desempenhos-agrupados)
-         (foldr (lambda (d1 d2)
-                  (desempenho
-                   (desempenho-nome d1)
-                   (+ (desempenho-pontuacao d1) (desempenho-pontuacao d2))
-                   (+ (desempenho-num-vitorias d1) (desempenho-num-vitorias d2))
-                   (+ (desempenho-saldo d1) (desempenho-saldo d2))))
-                (desempenho "" 0 0 0)
+         (foldr (lambda (djogo dfinal)
+                  (desempenho-final
+                   (desempenho-jogo-nome djogo)
+                   (+ (desempenho-jogo->pontuação djogo) (desempenho-final-pontuacao dfinal))
+                   (+ (if (desempenho-jogo->ganhou? djogo) 1 0) (desempenho-final-num-vitorias dfinal))
+                   (+ (desempenho-jogo-saldo djogo) (desempenho-final-saldo dfinal))))
+                (desempenho-final "" 0 0 0)
                 desempenhos-agrupados))
        desempenho-agrupado-por-time))
 
@@ -124,92 +231,124 @@
  (check-equal?
   (acumula-desempenhos
    (list
-    (desempenho "Corinthians" 3 1 2)
-    (desempenho "Palmeiras" 0 0 -2)
-    (desempenho "Cuiabá" 0 0 -1)
-    (desempenho "Bragantino" 3 1 1)
-    (desempenho "Bragantino" 1 0 0)
-    (desempenho "Corinthians" 1 0 0)))
+    (desempenho-jogo "Corinthians" 2)
+    (desempenho-jogo "Palmeiras" -2)
+    (desempenho-jogo "Cuiabá" -1)
+    (desempenho-jogo "Bragantino" 1)
+    (desempenho-jogo "Bragantino" 0)
+    (desempenho-jogo "Corinthians" 0)))
   (list
-   (desempenho "Bragantino" 4 1 1)
-   (desempenho "Corinthians" 4 1 2)
-   (desempenho "Cuiabá" 0 0 -1)
-   (desempenho "Palmeiras" 0 0 -2))))
+   (desempenho-final "Bragantino" 4 1 1)
+   (desempenho-final "Corinthians" 4 1 2)
+   (desempenho-final "Cuiabá" 0 0 -1)
+   (desempenho-final "Palmeiras" 0 0 -2))))
 
 
-;; dados os desempenhos de dois times, retorna #t se o primeiro
-;; time deve estar antes do segundo, e #f caso contrário.
-;; DesempenhoFinal DesempenhoFinal -> Bool
+
+;; desempenho-final desempenho-final -> Bool
+;; Dados os desempenhos de dois times, retorna #t se o primeiro
+;; time deve se classificar melhor do que o segundo, e #f caso contrário.
+;; Um time tem classificação melhor que outro se possui maior pontuação,
+;; sendo desempatados pelo número de vitórias, saldo de gols e ordenação
+;; lexicográfica dos nomes, respectivamente.
 (define (compara-desempenho d1 d2)
   (cond
     [(not (equal?
-           (desempenho-pontuacao d1) (desempenho-pontuacao d2)))
-     (> (desempenho-pontuacao d1) (desempenho-pontuacao d2))]
+           (desempenho-final-pontuacao d1) (desempenho-final-pontuacao d2)))
+     (> (desempenho-final-pontuacao d1) (desempenho-final-pontuacao d2))]
 
     [(not (equal?
-           (desempenho-num-vitorias d1) (desempenho-num-vitorias d2)))
-     (> (desempenho-num-vitorias d1) (desempenho-num-vitorias d2))]
+           (desempenho-final-num-vitorias d1) (desempenho-final-num-vitorias d2)))
+     (> (desempenho-final-num-vitorias d1) (desempenho-final-num-vitorias d2))]
     
     [(not (equal?
-           (desempenho-saldo d1) (desempenho-saldo d2)))
-     (> (desempenho-saldo d1) (desempenho-saldo d2))]
+           (desempenho-final-saldo d1) (desempenho-final-saldo d2)))
+     (> (desempenho-final-saldo d1) (desempenho-final-saldo d2))]
 
-    [else (string<? (desempenho-nome d1) (desempenho-nome d2))]))
+    [else (string<? (desempenho-final-nome d1) (desempenho-final-nome d2))]))
 
 (examples
- (check-equal? (compara-desempenho (desempenho "a" 30 20 10) (desempenho "b" 29 20 10)) #t)
- (check-equal? (compara-desempenho (desempenho "a" 30 25 10) (desempenho "b" 30 20 10)) #t)
- (check-equal? (compara-desempenho (desempenho "a" 30 20 12) (desempenho "b" 30 20 10)) #t)
- (check-equal? (compara-desempenho (desempenho "a" 30 20 10) (desempenho "b" 30 20 10)) #t)
- (check-equal? (compara-desempenho (desempenho "a" 6 20 10) (desempenho "b" 10 20 10)) #f))
+ (check-equal? (compara-desempenho (desempenho-final "a" 30 20 10) (desempenho-final "b" 29 20 10)) #t)
+ (check-equal? (compara-desempenho (desempenho-final "a" 30 25 10) (desempenho-final "b" 30 20 10)) #t)
+ (check-equal? (compara-desempenho (desempenho-final "a" 30 20 12) (desempenho-final "b" 30 20 10)) #t)
+ (check-equal? (compara-desempenho (desempenho-final "a" 30 20 10) (desempenho-final "b" 30 20 10)) #t)
+ (check-equal? (compara-desempenho (desempenho-final "a" 6 20 10) (desempenho-final "b" 10 20 10)) #f))
 
-;; listof DesempenhoFinal -> listof DesempenhoFinal
-;; ordenas os times conforme as regras
+;; list(desempenho-final) -> list(desempenho-final)
+;; ordena os times conforme as regras
 (define (classifica desempenho-times)
   (merge-sort desempenho-times compara-desempenho))
 
-;; String Number Alinhamento -> String
-(define (cria-espaçamento str tamanho direcao)
+;; String InteiroNãoNegativo Alinhamento -> String
+;; Alinhamento é "esquerda" ou "direita"
+;; Reescreve `str` utilizando `tamanho` posições. As posições que sobraram
+;; são compensadas por espaços a esquerda, caso `direção`
+;; for "esquerda" ou espaços a direita caso `direção` seja "direita"
+;; requer que (>= tamanho (string-length str))
+(define (cria-espaçamento str tamanho direção)
   (define espaços (make-string (- tamanho (string-length str)) #\space))
   (cond
-    [(equal? direcao "esquerda") (string-append espaços str)]
-    [(equal? direcao "direita") (string-append str espaços)]))
+    [(equal? direção "esquerda") (string-append espaços str)]
+    [(equal? direção "direita") (string-append str espaços)]))
 
-;; DesempenhoFinal InteiroNãoNegativo-> String
-(define (desempenho->string espaçamento-nome desempenho)
-  (string-append (cria-espaçamento (desempenho-nome desempenho) (+ espaçamento-nome 2) "direita") 
-                 (cria-espaçamento (number->string (desempenho-pontuacao desempenho)) 2 "esquerda")
-                 (cria-espaçamento (number->string (desempenho-num-vitorias desempenho)) 4 "esquerda")
-                 (cria-espaçamento (number->string (desempenho-saldo desempenho)) 5 "esquerda") " "))
+(examples
+ (check-equal? (cria-espaçamento "texto" 6 "esquerda") " texto")
+ (check-equal? (cria-espaçamento "texto" 6 "direita") "texto ")
+ (check-equal? (cria-espaçamento "" 8 "direita") "        "))
 
-;; listof DesempenhoFinal -> Inteiro Positivo
+;; desempenho-final InteiroNãoNegativo -> String
+;; Dado o desempenho de um time e o espaçamento que será utilizado
+;; para imprimir o nome, retorna uma string formatada que representa
+;; o desempenho do time no final do campeonato.
+(define (desempenho-final->string desempenho espaçamento-nome)
+  (string-append (cria-espaçamento (desempenho-final-nome desempenho) (+ espaçamento-nome 2) "direita") 
+                 (cria-espaçamento (number->string (desempenho-final-pontuacao desempenho)) 2 "esquerda")
+                 (cria-espaçamento (number->string (desempenho-final-num-vitorias desempenho)) 4 "esquerda")
+                 (cria-espaçamento (number->string (desempenho-final-saldo desempenho)) 5 "esquerda") " "))
+
+;; list(desempenho-final) -> InteiroPositivo
+;; Calcula o tamanho do do nome do time com maior nome.
 (define (calcula-maior-nome desempenhos)
-  (define tamanhos (map (lambda (d) (string-length (desempenho-nome d))) desempenhos))
+  (define tamanhos (map (lambda (d) (string-length (desempenho-final-nome d))) desempenhos))
   (foldr (lambda (t1 t2) (max t1 t2))
          0
          tamanhos))
+
+(examples
+ (check-equal?
+  (calcula-maior-nome (list (desempenho-final "12" 0 0 0)
+                            (desempenho-final "123" 0 0 0)
+                            (desempenho-final "1" 0 0 0)))
+  3))
   
 
-;; listof String -> listof String
+;; list(String) -> list(String)
+;; Dado uma lista de strings que representam os resultados dos jogos do campeonato, retorna
+;; uma lista contendo os desempenhos dos times ao final do campeonato ordenados segundo
+;; as regras descritas em `compara-desempenho`.
 (define (classifica-times sresultados)
   ;; Transforma a lista de strings da entrada em uma lista de resultados
+  
   (define resultados (map string->resultado sresultados))
 
-  ;; listof resultado -> listof DesempenhoJogo
+  ;; list(resultado) -> list(DesempenhoJogo)
   ;; Transforma a lista de resultados em uma lista de desempenhos de jogo
   (define desempenhos (calcula-desempenhos resultados))
 
-  ;; listof DesempenhoJogo -> listof DesempenhoFinal
+  ;; list(DesempenhoJogo) -> list(DesempenhoFinal)
   ;; Transforma a lista de desempenhos de cada jogo em uma lista
   ;; do desempenho acumulado de todos os jogos.
   (define desempenhos-acumulados (acumula-desempenhos desempenhos))
 
-  ;; listof DesempenhoFinal -> listof DesempenhoFinal
+  ;; list(DesempenhoFinal) -> list(DesempenhoFinal)
+  ;; Ordena os times.
   (define classificacao (classifica desempenhos-acumulados))
   
   (define maior-nome (calcula-maior-nome classificacao))
 
-  (map (lambda (c) (desempenho->string maior-nome c)) classificacao))
+  (map
+   (lambda (c) (desempenho-final->string c maior-nome))
+   classificacao))
   
 (display-lines (classifica-times (port->lines)))
   

@@ -75,7 +75,7 @@
  (check-equal? (merge-sort (list 2 14 1 4 6 2 1 9 2 5) <) (list 1 1 2 2 2 4 5 6 9 14)))
 
 ;; Dado uma lista não vazia '(a1 a2 a3 a4 ... )
-;; retorna o tamanho da maior subsequência tal que f(a1) = f(a2) = f(a3) ... f(ak)
+;; retorna o tamanho da maior subsequência tal que (f a1) = (f a2) = (f a3) ... (f ak)
 (define (tamanho-grupo-atual f lst)
   (cond
     [(empty? (rest lst)) 1]
