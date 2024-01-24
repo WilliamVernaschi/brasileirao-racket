@@ -17,7 +17,7 @@
 
 (examples
   (check-equal? (merge-lists (list 1 4 6) (list 1 2 3) <) (list 1 1 2 3 4 6))
-  (check-equal? (merge-lists (list "a" "b" "z") (list "d") <) (list "a" "b" "d" "z")))
+  (check-equal? (merge-lists (list "a" "b" "z") (list "d") string<?) (list "a" "b" "d" "z")))
 
 ;; list(X) InteiroNãoNegativo -> list(X)
 ;; Retorna uma lista contendo os primeiros `n` elementos de `lst`, dado
