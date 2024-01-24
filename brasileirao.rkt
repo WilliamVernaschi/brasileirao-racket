@@ -15,15 +15,18 @@
          (cons (first lstA) (merge-lists (rest lstA) lstB cmp))
          (cons (first lstB) (merge-lists lstA (rest lstB) cmp)))]))
 
+(examples
+  (check-equal? (merge-lists (list 1 4 6) (list 1 2 3) <) (list 1 1 2 3 4 6))
+  (check-equal? (merge-lists (list "a" "b" "z") (list "d") <) (list "a" "b" "d" "z")))
 
-;; list(X) -> list(X)
-;; Retorna os primeiros `size` elementos de `lst`, dado
-;; que (<= size (length lst))
-(define (take lst size)
+;; list(X) InteiroNãoNegativo -> list(X)
+;; Retorna uma lista contendo os primeiros `n` elementos de `lst`, dado
+;; que (<= n (length lst))
+(define (take lst n)
   (cond
-    [(= size 0) empty]
+    [(= n 0) empty]
     [else
-     (cons (first lst) (take (rest lst) (sub1 size)))]))
+     (cons (first lst) (take (rest lst) (sub1 n)))]))
 
 (examples
  (check-equal? (take empty 0) empty)
@@ -32,14 +35,14 @@
  (check-equal? (take (list "a" "b" "c") 2) (list "a" "b"))
  (check-equal? (take (list "a" "b" "c") 3) (list "a" "b" "c")))
 
-;; list(X) -> list(X)
-;; Remove os primeiros `size` elementos de `lst`, dado
-;; que (<= size (length lst))
-(define (drop lst size)
+;; list(X) InteiroNãoNegativo -> list(X)
+;; Remove os primeiros `n` elementos de `lst`, dado
+;; que (<= n (length lst))
+(define (drop lst n)
   (cond
-    [(= size 0) lst]
+    [(= n 0) lst]
     [else
-     (drop (rest lst) (sub1 size))]))
+     (drop (rest lst) (sub1 n))]))
 
 (examples
  (check-equal? (drop empty 0) empty)
@@ -70,7 +73,7 @@
  (check-equal? (merge-sort (list 2 14 1 4 6 2 1 9 2 5) <) (list 1 1 2 2 2 4 5 6 9 14)))
 
 ;; Dado uma lista não vazia '(a1 a2 a3 a4 ... )
-;; retorna o tamanho da maior subsequência tal que f(a1) = f(a2) = f(a3) ... f(ak)
+;; retorna o maior valor de k tal que (f a1) = (f a2) = (f a3) = ... = (f ak)
 ;; (X -> Y) list(X) -> InteiroNãoNegativo
 (define (tamanho-grupo-atual f lst)
   (cond
@@ -86,7 +89,7 @@
  (check-equal? (tamanho-grupo-atual (lambda (x) x) (list 1 1 2 1 1 1)) 2)
  (check-equal? (tamanho-grupo-atual (lambda (x) (not (= (modulo x 7) 0))) (list 2 3 5 5 11 313)) 6))
 
-;; Agrupa elementos contíguos que possuem o mesmo valor
+;; Agrupa elementos adjacentes que possuem o mesmo valor
 ;; quando a função f é aplicada sobre eles.
 ;; (X -> Y) list(X) -> list(list(X))
 (define (group-by f lst)
@@ -118,6 +121,7 @@
 ;; nome : String - Nome do time.
 ;; saldo : Inteiro - (- Número-de-gols-marcados Número-de-gols-sofridos) no jogo atual
 
+
 ;; desempenho-jogo -> PontuaçãoJogo
 ;; PontuaçãoJogo pode ser um dos valores: 0, 1 ou 3.
 ;; Dado o desempenho de um time em um jogo, retorna quantos pontos ele
@@ -133,6 +137,7 @@
 ;; ele ganhou, e #f caso contrário.
 (define (desempenho-jogo->ganhou? desempenho)
   (> (desempenho-jogo-saldo desempenho) 0))
+
 
 (struct desempenho-final (nome pontuacao num-vitorias saldo) #:transparent)
 ;; desempenho-final representa o desempenho do time no final do campeonato.
@@ -328,19 +333,18 @@
 ;; as regras descritas em `compara-desempenho`.
 (define (classifica-times sresultados)
   ;; Transforma a lista de strings da entrada em uma lista de resultados
-  
   (define resultados (map string->resultado sresultados))
 
-  ;; list(resultado) -> list(DesempenhoJogo)
+  ;; list(resultado) -> list(desempenho-jogo)
   ;; Transforma a lista de resultados em uma lista de desempenhos de jogo
   (define desempenhos (calcula-desempenhos resultados))
 
-  ;; list(DesempenhoJogo) -> list(DesempenhoFinal)
+  ;; list(desempenho-jogo) -> list(desempenho-final)
   ;; Transforma a lista de desempenhos de cada jogo em uma lista
-  ;; do desempenho acumulado de todos os jogos.
+  ;; do desempenho final de cada um dos times.
   (define desempenhos-acumulados (acumula-desempenhos desempenhos))
 
-  ;; list(DesempenhoFinal) -> list(DesempenhoFinal)
+  ;; list(desempenho-final) -> list(desempenho-final)
   ;; Ordena os times.
   (define classificacao (classifica desempenhos-acumulados))
   
