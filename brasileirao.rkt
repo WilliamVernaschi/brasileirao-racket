@@ -2,6 +2,42 @@
 
 (require examples)
 
+;; list(X) -> X
+;; Retorna o segundo elemento de uma lista 
+;; com dois ou mais elementos
+(define (second lst)
+  (first (rest lst)))
+
+;; list(X) -> X
+;; Retorna o terceiro elemento de uma lista 
+;; com três ou mais elementos
+(define (third lst)
+  (second (rest lst)))
+
+;; list(X) -> X
+;; Retorna o quarto elemento de uma lista 
+;; com quatro ou mais elementos
+(define (fourth lst)
+  (third (rest lst)))
+
+;; String -> list(String)
+;; dado uma string, separa ela em uma lista de strings, onde
+;; o delimitador entre listas de string é o espaço.
+(define (string-split str)
+  (define str-lst (string->list str))
+  (define não-começa-com-espaço? (lambda (l) (not (equal? (first l) #\space))))
+  (define não-é-espaço? (lambda (c) (not (equal? c #\space))))
+
+  (map list->string
+       (filter não-começa-com-espaço?
+               (group-by não-é-espaço? str-lst))))
+
+(examples
+ (check-equal? (string-split "oi tudo bem?") (list "oi" "tudo" "bem?"))
+ (check-equal? (string-split " tem   espaços demais  !  ") (list "tem" "espaços" "demais" "!"))
+ (check-equal? (string-split "stringona") (list "stringona"))
+ (check-equal? (string-split "") empty))
+
 ;; list(X) list(X) (X X -> Bool) -> list(X)
 ;; Dadas duas listas ordenadas, retorna uma outra lista ordenada
 ;; contendo os elementos das outras duas, as operaçoes de comparação
@@ -156,7 +192,6 @@
              (string->number (second split))
              (third split)
              (string->number (fourth split))))
-
 (examples
  (check-equal? (string->resultado "Sao-Paulo 1 Atletico-MG 2")
                (resultado "Sao-Paulo" 1 "Atletico-MG" 2))
@@ -176,6 +211,9 @@
  (check-equal? (calcula-saldos (resultado "Corinthians" 7 "Santos" 1)) (list 6 -6))
  (check-equal? (calcula-saldos (resultado "Sao-Paulo" 2 "Palmeiras" 2)) (list 0 0)))
 
+(define (cons2 A B lst)
+  (cons A (cons B lst)))
+
 ;; list(resultado) -> list(desempenho-jogo)
 ;; Dado uma lista contendo o resultado de n jogos, retorna
 ;; uma lista contendo 2n desempenhos dos times.
@@ -186,11 +224,10 @@
      (define saldo-times (calcula-saldos (first resultados)))
      (define nome-times (list (resultado-nome-anfitrião (first resultados))
                               (resultado-nome-visitante (first resultados))))
-     (cons
+     (cons2
       (desempenho-jogo (first nome-times) (first saldo-times))
-      (cons
-       (desempenho-jogo (second nome-times) (second saldo-times))
-       (calcula-desempenhos (rest resultados))))]))
+      (desempenho-jogo (second nome-times) (second saldo-times))
+      (calcula-desempenhos (rest resultados)))]))
 
 (examples
  (check-equal?
@@ -277,7 +314,7 @@
  (check-equal? (compara-desempenho (desempenho-final "a" 30 25 10) (desempenho-final "b" 30 20 10)) #t)
  (check-equal? (compara-desempenho (desempenho-final "a" 30 20 12) (desempenho-final "b" 30 20 10)) #t)
  (check-equal? (compara-desempenho (desempenho-final "a" 30 20 10) (desempenho-final "b" 30 20 10)) #t)
- (check-equal? (compara-desempenho (desempenho-final "a" 6 20 10) (desempenho-final "b" 10 20 10)) #f))
+ (check-equal? (compara-desempenho (desempenho-final "a" 6 20 10)  (desempenho-final "b" 10 20 10)) #f))
 
 ;; list(desempenho-final) -> list(desempenho-final)
 ;; ordena os times conforme as regras
@@ -315,9 +352,8 @@
 ;; Calcula o tamanho do do nome do time com maior nome.
 (define (calcula-maior-nome desempenhos)
   (define tamanhos (map (lambda (d) (string-length (desempenho-final-nome d))) desempenhos))
-  (foldr (lambda (t1 t2) (max t1 t2))
-         0
-         tamanhos))
+  (foldr max 0 tamanhos))
+
 
 (examples
  (check-equal?
@@ -355,5 +391,3 @@
    classificacao))
   
 (display-lines (classifica-times (port->lines)))
-  
-  
